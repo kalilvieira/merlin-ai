@@ -1,0 +1,17 @@
+{
+  "name": "Merlin AI — Navegação inteligente",
+  "short_name": "Merlin AI",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9f7",
+  "theme_color": "#075b35",
+  "icons": [
+    {
+      "src": "/merlin-logo.png",
+      "sizes": "500x500",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
