@@ -40,6 +40,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import QRCode from "qrcode";
+import { listKey, readBrowserList, saveBrowserList } from "@/lib/browser-list";
 import {
   seedProducts,
   seedConfig,
@@ -71,6 +72,7 @@ export default function Home() {
     [config, setConfig] = useState(seedConfig),
     [store, setStore] = useState("salvador"),
     [ready, setReady] = useState(false),
+    [storage, setStorage] = useState("server"),
     [loadError, setLoadError] = useState(""),
     [busy, setBusy] = useState(false),
     [savingList, setSavingList] = useState(false);
@@ -111,7 +113,15 @@ export default function Home() {
     if (!r.ok) throw Error(d.error);
     setProducts(d.products);
     setConfig(d.config);
-    setList(d.list);
+    setStorage(d.storage);
+    // Uma lista local existente continua local até ser excluída pelo usuário.
+    const saved = readBrowserList(localStorage, d.products);
+    if (saved !== null) {
+      setList(saved);
+      setStorage("browser");
+    } else {
+      setList(d.list);
+    }
     setReady(true);
     setLoadError("");
   }, []);
@@ -222,7 +232,11 @@ export default function Home() {
     if (savingList) return;
     setSavingList(true);
     try {
-      await api("list", { items });
+      if (storage === "browser") {
+        saveBrowserList(localStorage, items);
+      } else {
+        await api("list", { items });
+      }
       setList(items);
       return true;
     } catch (e) {
@@ -502,6 +516,11 @@ export default function Home() {
               >
                 Tentar novamente
               </button>
+            </div>
+          )}
+          {ready && storage === "browser" && (
+            <div className="notice" role="status">
+              Sua lista será salva neste navegador. Busca e rotas estão disponíveis.
             </div>
           )}
           {!ready && !loadError && (
@@ -1679,8 +1698,8 @@ export default function Home() {
                 manualmente; não coletamos GPS, BLE ou Wi-Fi.
               </p>
               <p>
-                A lista, buscas, avaliações e chamados são associados à sua
-                conta. Os eventos não pedem nome, telefone ou e-mail. Evite
+                A lista, buscas, avaliações e chamados são associados a este
+                navegador. Os eventos não pedem nome, telefone ou e-mail. Evite
                 inserir dados pessoais nas mensagens.
               </p>
               <p>
@@ -1694,13 +1713,15 @@ export default function Home() {
                 onClick={async () => {
                   setBusy(true);
                   try {
+                    localStorage.removeItem(listKey);
+                    setList([]);
                     await api("privacy-delete");
                     setList([]);
                     setAnswers([]);
                     setPhoto("");
                     closeDialog();
                     toast.success(
-                      "Lista, eventos, avaliações e chamados desta conta excluídos.",
+                      "Lista local e registros desta demonstração excluídos.",
                     );
                   } catch (e) {
                     toast.error(e.message);

@@ -4,7 +4,7 @@ Protótipo responsivo do Challenge 2026, baseado no escopo e requisitos fornecid
 
 ## Experimentar
 
-1. Abra o site privado com sua conta. A autenticação protege a lista e os dados da demonstração; não há papéis administrativos.
+1. Abra o site. Cada navegador recebe uma identidade anônima; não há login nem papéis administrativos.
 2. Em **Assistente**, experimente “peça para tapar cano” e depois “50 mm”.
 3. Consulte detalhes, adicione produtos à lista e crie uma rota até as prateleiras.
 4. Altere a loja para testar a disponibilidade. A loja e os SKUs podem ser levados ao celular por QR Code.
@@ -26,7 +26,7 @@ Catálogo inicial: 18 produtos fictícios em Hidráulica, Elétrica e Pintura; d
 | Mapa e rotas | Grafo navegável, obstáculos, menor caminho e atualização manual de posição |
 | Multi-produto | Otimização de até 10 produtos por rota; escala ilustrativa de 2 m por célula |
 | Guia por câmera | Vídeo local com destino e localização da prateleira. Não é RA espacial: sem tracking ou ancoragem |
-| Lista | Quantidades, marcação de item encontrado, remoção, total fictício, exportação e persistência por conta |
+| Lista | Quantidades, marcação de item encontrado, remoção, total fictício, exportação e persistência por navegador |
 | QR de continuação | Link com loja e SKUs, reconstruindo rota da entrada no outro dispositivo autorizado |
 | Quiosque | Modo de autoatendimento da sessão privada. Uso público requer isolamento de sessões e conta de dispositivo |
 | Feedback | Nota 1–5, confirmação de produto encontrado e comentário salvos |
@@ -41,8 +41,8 @@ RF-13 (painel administrativo), RF-17 (atualização administrativa de mapa), das
 
 ## Dados e segurança
 
-- Banco D1 com consultas preparadas e migrações versionadas.
-- APIs exigem identidade autenticada encaminhada pela plataforma; listas e registros pessoais são vinculados a essa identidade.
+- Postgres/Neon opcional, com consultas parametrizadas e tabela criada automaticamente.
+- APIs vinculam registros a uma identidade anônima em cookie httpOnly. Isso não equivale a autenticação por conta.
 - Escritas de origem divergente são bloqueadas.
 - Fotos e vídeos não são enviados ao servidor. Fechar a página descarta a foto.
 - A posição é manual: não há coleta de GPS/BLE/Wi-Fi.
@@ -56,6 +56,12 @@ Node.js >= 22.13 e npm. `npm install` instala as dependências, `npm run dev` in
 
 Variável de ambiente: `DATABASE_URL` (Postgres, por exemplo Neon via Vercel Marketplace). A tabela `records` é criada automaticamente na primeira requisição. Sem login: cada navegador recebe um identificador anônimo em cookie, e listas e registros ficam vinculados a ele.
 
-Deploy na Vercel: importe o repositório (Next.js é detectado automaticamente), conecte um banco Postgres/Neon ao projeto para definir `DATABASE_URL` e faça o deploy.
+Deploy na Vercel: importe o repositório (Next.js é detectado automaticamente), faça o deploy. Opcionalmente conecte um banco Neon ao projeto para definir `DATABASE_URL` (ou `POSTGRES_URL`) e faça um novo deploy.
+
+Sem banco ou com falha ao carregar a lista do banco, o catálogo, a busca e as rotas continuam disponíveis. A interface informa quando a lista é salva no `localStorage` do navegador; ela persiste ao recarregar a página, mas não é compartilhada com outros dispositivos. Uma lista local existente continua sendo usada quando o banco retorna, evitando sobrescrever dados silenciosamente. Eventos são opcionais e nunca bloqueiam buscas. Avaliações e pedidos de ajuda ainda exigem banco para confirmar o salvamento; falhas não são apresentadas como sucesso.
 
 Tecnologias: React/JSX com Next.js (App Router), Radix, Lucide, QRCode e Postgres (Neon).
+
+## Testes de regressão
+
+Com o servidor local rodando sem `DATABASE_URL`/`POSTGRES_URL` (`npm run build` e `npm start`), execute `npm test`. Os testes cobrem carregamento sem banco, exemplos de busca, refinamento, persistência da lista no armazenamento do navegador, cálculo de rotas e validação da API. Para outra porta, defina `TEST_BASE_URL`.

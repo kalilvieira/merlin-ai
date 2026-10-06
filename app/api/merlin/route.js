@@ -9,11 +9,14 @@ import {
 import { z } from "zod";
 const validStore = (s) => stores.some((x) => x.id === s);
 async function event(owner, type, data) {
-  await saveRecord(crypto.randomUUID(), owner, "event", {
-    type,
-    data,
-    time: Date.now(),
-  });
+  try {
+    await saveRecord(crypto.randomUUID(), owner, "event", {
+      type, data, time: Date.now(),
+    });
+  } catch {
+    // Telemetria opcional não pode impedir buscas ou navegação.
+    console.warn("merlin_event_not_saved");
+  }
 }
 function error(e) {
   if (e instanceof Error && e.message === "UNAUTHORIZED")
@@ -50,11 +53,19 @@ export async function GET(req) {
         { error: "Recurso indisponível neste protótipo." },
         { status: 404 },
       );
-    const list = await readRecord("list:" + user.id, []);
+    let list = [];
+    let storage = "server";
+    try {
+      list = await readRecord("list:" + user.id, []);
+    } catch {
+      storage = "browser";
+      console.warn("merlin_browser_storage_enabled");
+    }
     return Response.json({
       products: seedProducts,
       config: seedConfig,
       list,
+      storage,
       demo: true,
     });
   } catch (e) {
